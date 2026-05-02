@@ -1,23 +1,31 @@
-name: Build
+name: Build CoreProtect
 on:
-  push:
-    branches:
-      - master
-  pull_request:
-    types: [opened, synchronize, reopened]
+  workflow_dispatch: {}
 jobs:
   build:
-    name: Build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
-      - name: Set up JDK 25
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '25'
-          distribution: 'temurin'
-          cache: 'maven'
+          java-version: 21
+          distribution: temurin
       - name: Build
-        run: mvn -B verify
+        run: mvn package --file pom.xml -Dproject.branch=master
+      - name: Pick jar
+        id: jar
+        run: |
+          mkdir staging
+          for file in target/*.jar; do
+            if [[ "$(basename "$file")" != original-* ]]; then
+              cp "$file" staging/
+              break
+            fi
+          done
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CoreProtect
+          path: staging/
